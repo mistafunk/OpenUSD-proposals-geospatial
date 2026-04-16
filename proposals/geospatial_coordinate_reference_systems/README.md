@@ -86,7 +86,7 @@ with contributions from Esri, Pixar, NVIDIA, Bentley, and Trimble.
 OpenUSD provides a powerful scene description framework
 with rich support for geometry, materials, lighting, and physics.
 However, it currently has no mechanism to express
-*where a scene is located on the Earth's surface*.
+*where a scene is located in or on a celestial body*.
 
 A building model authored in USD can describe its shape,
 appearance, and internal structure in exquisite detail —
