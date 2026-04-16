@@ -124,7 +124,7 @@ to the question "where is this scene?"
 
 ## Problem statement
 
-### Placing 3D content on the Earth
+### Placing 3D content on a celestial body
 
 To place a 3D model at a real-world location, three things are needed:
 
