@@ -76,7 +76,7 @@ and a runtime reprojection pipeline transforms geometry
 between different CRS zones within a single composed stage.
 
 This proposal is the result of collaborative work
-within the AOUSD Geospatial Working Group,
+within the AOUSD AECO Interest Group,
 with contributions from Esri, Pixar, NVIDIA, Bentley, and Trimble.
 
 ## Motivation
