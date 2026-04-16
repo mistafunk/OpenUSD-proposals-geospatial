@@ -2,7 +2,7 @@
 ## Contributors
 - **Esri** (Tamrat Belayneh, Simon Haegler)
 - **Nvidia** (Aaron Luk)
-- Also based on work by David de Koning, Sebastien Vielliard, Simon Haegler, Tamrat Belayneh and the AOUSD Geospatial Working Group
+- Also based on work by David de Koning, Sebastien Vielliard, Simon Haegler, Tamrat Belayneh in the AOUSD AECO Interest Group.
 
 ## Contents
 
