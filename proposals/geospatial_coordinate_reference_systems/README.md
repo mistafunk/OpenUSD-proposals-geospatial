@@ -63,7 +63,7 @@
 This proposal introduces first-class support for
 **Geospatial Coordinate Reference Systems (CRS)** in OpenUSD.
 It defines two new schemas that allow USD scenes to declare
-*where on Earth* their 3D content is located,
+*where on a celestial body* their 3D content is located,
 enabling interoperability with GIS, AECO, digital twin,
 and simulation workflows that require real-world positioning.
 
