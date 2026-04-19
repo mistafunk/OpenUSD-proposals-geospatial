@@ -751,6 +751,47 @@ world.AddTranslateOp(UsdGeomXformOp.PrecisionDouble).Set(
     Gf.Vec3d(481948.63, 3768393.52, 400.0))
 ```
 
+## Runtime coordinate transformation
+
+There are several runtime situations where coordinates defined in different CRS need to be harmonized:
+
+- rendering
+- stage queries (e.g. bounding boxes)
+- indirect transformation requests (e.g. upon stage flattening)
+- explicit transformation requests using the new API calls
+
+We propose to introduce an internal abstraction to compute coordinate transformations from one CRS to another:
+
+```text
+transform(inout ArrayVector3d coordinates, in WKT crsIn, in WKT crsOut)
+```
+
+The OpenUSD plugin system is employed to register implementations.
+
+### Default Implementation using the "PROJ" library
+
+The OpenSource [PROJ](https://proj.org/) library can be used to create a bidirectional "transformer" object by parsing the USD WKT2 string and defining the target Coordinate Reference System (CRS) by its EPSG code.
+
+The following sample code, using the `pyproj` library (a common Python binding for PROJ), demonstrates how to create a transformer between the Derived CRS with Affine Site Calibration WKT string provided in the document and the target EPSG:10499.
+
+```python
+import pyproj
+
+# 1. Define the Coordinate Reference Systems (CRS)
+
+# 1a. Create a CRS object from the USD WKT string.
+crs_from = pyproj.CRS.from_wkt(USD_WKT_STRING)
+
+# 1b. Create a CRS object from the target EPSG code.
+crs_to = pyproj.CRS.from_string("EPSG:10499")
+
+# 2. Create the Transformer
+transformer = pyproj.Transformer.from_crs(crs_from, crs_to)
+
+# Example usage
+target_x, target_y, target_z = transformer.transform(usd_x, usd_z, usd_y)
+```
+
 ## Interaction with existing USD features
 
 ### Stage metadata: metersPerUnit and upAxis
