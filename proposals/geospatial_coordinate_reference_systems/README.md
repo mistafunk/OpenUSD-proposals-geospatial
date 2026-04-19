@@ -225,6 +225,136 @@ WKT 2 supports the `COORDINATEMETADATA` wrapper
 with `FRAMEEPOCH` and `EPOCH` clauses
 for high-precision applications.
 
+## Case Study for WGS84 Approach
+
+WGS 84 (EPSG:4326) became dominant mainly because GPS uses it natively — every GPS receiver outputs coordinates in this datum. It is a global geodetic reference, so unlike national datums it works anywhere on Earth with one definition. The web mapping ecosystem reinforced this: GeoJSON mandates it, and most APIs and OGC standards default to it. Being a simple longitude/latitude geographic CRS makes it human-readable and easy to re-project from.
+
+### Eiffel Tower Example
+
+Currently, OpenUSD georeferencing relies on stage-level metadata to define the relationship between virtual and physical space. Consider a high-fidelity model of the Eiffel Tower:
+
+- Metrics: Authored at a scale of `metersPerUnit = 1.0`.
+- Orientation: Configured as Y-Up, a common legacy default in many DCC tools.
+- Coordinates: Vertex positions use 32-bit single-precision floats (`float3`).
+- Local Origin: To avoid "floating-point jitter" caused by large coordinate values, the center of the square base is placed at `(0,0,0)`.
+
+![Eiffel Tower](./eiffel_tower.png)
+
+### WGS84 Georeferencing Approach
+
+The [omniGeospatial](https://docs.omniverse.nvidia.com/kit/docs/omni.usd.schema.geospatial/0.0.1/USD_SCHEMAS.html) schema (and [Hydra plugin](https://github.com/NVIDIA-Omniverse/OpenUSD-plugin-samples/tree/main/src/hydra-plugins#creating-a-custom-hydra-20-scene-index-for-geospatially-aware-transforms) as introduced by Nvidia Omniverse) georeferences such a model by applying a `WGS84ReferencePositionAPI` to a parent `Xform` prim.
+
+This establishes a global anchor using:
+
+- Latitude: 48.8584 N
+- Longitude: 2.2945 E
+- Altitude: 33.0 m (Height above the WGS84 ellipsoid).
+
+The runtime engine then performs an Earth-Centered, Earth-Fixed (ECEF) conversion and a rotation into a Local Tangent Plane, such as East-North-Up (ENU).
+
+### Limitations of only using a WGS84 anchor point
+
+While likely sufficient for visual effect work, the above methods is inadequate for high-precision Survey and Construction for two primary reasons:
+
+1. Datum Ambiguity: The term "WGS84" technically denotes a Datum Ensemble with an inherent low accuracy of approximately 2 meters. WGS84 coordinates are dynamic, changing over time due to tectonic plate motions, and up to 10 cm per year. For WGS84 coordinates to be accurate, they must be provided with the corresponding realization and measurement epoch (e.g., "WGS 84 (G2296) at epoch 2026.25"). This necessary detail is currently unsupported in standard USD schemas.
+
+2. Axis Orientation: The current definition of "USD North" lacks the precision needed to align with the "True North" of a national geodetic Coordinate Reference System (CRS). Furthermore, AECO projects often require heights to be referenced to the geoid (orthometric height) for gravity-dependent systems, such as drainage. Current USD methods cannot precisely align with local vertical systems (like IGN 69) or map projections (like Lambert 93), which for example are the official systems used for AECO projects in France.
+
+## The Proposal: Use of OGC WKT 2.1.11
+
+We propose updating the OpenUSD schema to support describing the Coordinate Reference System (CRS) as a self-contained [WKT v2.1.11](https://docs.ogc.org/is/18-010r11/18-010r11.pdf) string ("Well-known text representation of coordinate reference systems"). This is equivalent to [ISO 19162:2019](https://www.iso.org/standard/76496.html).
+
+Key Benefits:
+
+- Standardization: Uses a mature, ISO-compliant format widely adopted in GIS and engineering.
+- Self-Contained: Encodes all necessary parameters (ellipsoid, datum, projection, and units) in a single string, eliminating runtime database dependencies.
+- Precision: Supports accurate definition of any Coordinate Reference Systems.
+
+### WKT Examples
+
+#### WGS84 ENU (East-North-Up) Local Tangent Plane
+
+The following WKT string could be used to replace the approach using `WGS84ReferencePositionAPI` (see [case study](#case-study-for-wgs84-approach) above). It defines a 3D local coordinate system centered at the Eiffel Tower with a Y-Up orientation.
+
+```lisp
+GEODCRS["Y-Up Local Tangent Plane at Eiffel Tower",
+    BASEGEOGCRS["WGS 84",
+        DATUM["World Geodetic System 1984",
+            ELLIPSOID["WGS 84", 6378137, 298.257223563, LENGTHUNIT["metre", 1]],
+            ID["EPSG", 6326]],
+        ID["EPSG", 4979]],
+    DERIVINGCONVERSION["Topocentric at Eiffel Tower",
+        METHOD["Geographic/topocentric conversions", ID["EPSG", 9837]],
+        PARAMETER["Latitude of topocentric origin", 48.8584,
+            ANGLEUNIT["degree", 0.0174532925199433], ID["EPSG", 8834]],
+        PARAMETER["Longitude of topocentric origin", 2.2945,
+            ANGLEUNIT["degree", 0.0174532925199433], ID["EPSG", 8835]],
+        PARAMETER["Ellipsoidal height of topocentric origin", 33.0,
+            LENGTHUNIT["metre", 1.0], ID["EPSG", 8836]]],
+    CS[Cartesian, 3],
+    AXIS["X", east], AXIS["Y", up], AXIS["Z", south],
+    LENGTHUNIT["metre", 1]]
+```
+
+#### Derived CRS with Affine Site Calibration
+
+For projects requiring high accuracy, we can compute the transformation between the National CRS (e.g., Lambert-93 + IGN69) and the USD local CRS using least squares. This transformation—which can include affine transformations (EPSG 9624) and vertical adjustment planes to account for localized vertical deviations—can be encoded directly into the WKT string.
+
+```lisp
+COMPOUNDCRS["Site Local Coordinate System (X East, Y Up, Z South)",
+    DERIVEDPROJCRS["Site Local Horizontal (Derived from ETRS89-FRA/Lambert-93)",
+        BASEPROJCRS["ETRS89-FRA [RGF93 v2b] / Lambert-93",
+            BASEGEOGCRS["ETRS89-FRA [RGF93 v2b]",
+                DATUM["ETRS89-FRA [RGF93 v2b]",
+                    ELLIPSOID["GRS 1980", 6378137, 298.257222101,
+                        LENGTHUNIT["metre", 1]]],
+                ID["EPSG", 9782]],
+            CONVERSION["Lambert-93",
+                METHOD["Lambert Conic Conformal (2SP)", ID["EPSG", 9802]],
+                PARAMETER["Latitude of false origin", 46.5,
+                    ANGLEUNIT["degree", 0.0174532925199433], ID["EPSG", 8821]],
+                PARAMETER["Longitude of false origin", 3,
+                    ANGLEUNIT["degree", 0.0174532925199433], ID["EPSG", 8822]],
+                PARAMETER["Latitude of 1st standard parallel", 44,
+                    ANGLEUNIT["degree", 0.0174532925199433], ID["EPSG", 8823]],
+                PARAMETER["Latitude of 2nd standard parallel", 49,
+                    ANGLEUNIT["degree", 0.0174532925199433], ID["EPSG", 8824]],
+                PARAMETER["Easting at false origin", 700000,
+                    LENGTHUNIT["metre", 1.0], ID["EPSG", 8826]],
+                PARAMETER["Northing at false origin", 6600000,
+                    LENGTHUNIT["metre", 1.0], ID["EPSG", 8827]]],
+            ID["EPSG", 9794]],
+        DERIVINGCONVERSION["Site Calibration Horizontal Affine",
+            METHOD["Affine parametric transformation", ID["EPSG", 9624]],
+            PARAMETER["A0", 10.0, LENGTHUNIT["metre", 1.0], ID["EPSG", 8623]],
+            PARAMETER["A1", 1.00005, SCALEUNIT["unity", 1.0], ID["EPSG", 8624]],
+            PARAMETER["A2", 0.00001, SCALEUNIT["unity", 1.0], ID["EPSG", 8625]],
+            PARAMETER["B0", 5.0, LENGTHUNIT["metre", 1.0], ID["EPSG", 8639]],
+            PARAMETER["B1", -0.00001, SCALEUNIT["unity", 1.0], ID["EPSG", 8640]],
+            PARAMETER["B2", 1.00005, SCALEUNIT["unity", 1.0], ID["EPSG", 8641]]],
+        CS[Cartesian, 2],
+        AXIS["X", east, ORDER[1]],
+        AXIS["Z", south, ORDER[3]],
+        LENGTHUNIT["metre", 1.0]],
+    VERTCRS["Site Local Vertical (Inclined Plane)",
+        BASEVERTCRS["NGF-IGN69 height",
+            VDATUM["Nivellement General de la France - IGN69",
+                ID["EPSG", 5119]],
+            ID["EPSG", 5720]],
+        DERIVINGCONVERSION["Inclined Plane Vertical Adjustment",
+            METHOD["Vertical Offset and Slope", ID["EPSG", 1046]],
+            PARAMETER["Vertical Offset", 1.5,
+                LENGTHUNIT["metre", 1.0], ID["EPSG", 8603]],
+            PARAMETER["Inclination in latitude", 0.00001,
+                ANGLEUNIT["radian", 1.0], ID["EPSG", 8730]],
+            PARAMETER["Inclination in longitude", 0.00001,
+                ANGLEUNIT["radian", 1.0], ID["EPSG", 8731]]],
+        CS[vertical, 1],
+        AXIS["Y", up, ORDER[2]],
+        LENGTHUNIT["metre", 1.0]]
+]
+```
+
 ## Design overview
 
 ### Principles
