@@ -1130,7 +1130,7 @@ Working prototype implementations exist:
 
 ### WGS 84 / UTM zone 11N (EPSG:32611)
 
-```
+```lisp
 PROJCRS["WGS 84 / UTM zone 11N",
     BASEGEOGCRS["WGS 84",
         DATUM["World Geodetic System 1984",
@@ -1167,7 +1167,7 @@ PROJCRS["WGS 84 / UTM zone 11N",
 
 ### Compound CRS: NAD83 / California zone 5 (ftUS) + NAVD88 height
 
-```
+```lisp
 COMPOUNDCRS["NAD83 / California zone 5 (ftUS) + NAVD88 height (ftUS)",
     PROJCRS["NAD83 / California zone 5 (ftUS)",
         BASEGEOGCRS["NAD83",
@@ -1204,7 +1204,7 @@ COMPOUNDCRS["NAD83 / California zone 5 (ftUS) + NAVD88 height (ftUS)",
 
 ### 3D Geographic with dynamic datum and epoch
 
-```
+```lisp
 COORDINATEMETADATA[
     GEOGCRS["WGS 84 (G2296)",
         DYNAMIC[FRAMEEPOCH[2024]],
@@ -1226,7 +1226,7 @@ COORDINATEMETADATA[
 
 ### 3D Geocentric (ECEF) with dynamic datum
 
-```
+```lisp
 GEODCRS["ITRF2020",
     DYNAMIC[FRAMEEPOCH[2015]],
     DATUM["International Terrestrial Reference Frame 2020",
