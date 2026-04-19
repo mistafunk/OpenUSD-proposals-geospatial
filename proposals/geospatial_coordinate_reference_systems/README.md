@@ -1107,6 +1107,10 @@ Working prototype implementations exist:
 7. **Ship standard CRS library files**
    with common EPSG definitions.
 
+8. Refine the sample WKT strings to ensure consistent usage of elements from the WKT v2 specification when describing the same CRS across various typical use cases.
+
+9. Write sample source code to demonstrate how the resulting WKT strings can be used with the open-source PROJ library to convert USD coordinates to the national coordinate reference system with expected accuracy.
+
 ## References
 
 | Resource | Link |
